@@ -17,30 +17,44 @@ import { useToast } from '@/hooks/use-toast';
 import { sendMessage } from '@/lib/socketService';
 import { useForm } from 'react-hook-form';
 import { Send, Loader2 } from 'lucide-react';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface MessageFormProps {
   apiKey: string | null;
   clientReady: boolean;
 }
 
-interface FormValues {
-  phoneNumber: string;
-  message: string;
-}
+const formSchema = z.object({
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  message: z.string().min(1, "Message is required"),
+  apiKey: z.string().min(1, "API Key is required")
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       phoneNumber: '',
-      message: ''
+      message: '',
+      apiKey: apiKey || ''
     }
   });
 
+  // Update API key in the form when it changes
+  React.useEffect(() => {
+    if (apiKey) {
+      form.setValue('apiKey', apiKey);
+    }
+  }, [apiKey, form]);
+
   const onSubmit = async (data: FormValues) => {
-    if (!apiKey || !clientReady) {
+    if (!clientReady) {
       toast({
         title: "Error",
         description: "WhatsApp client is not connected. Please scan the QR code first.",
@@ -49,16 +63,29 @@ export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady })
       return;
     }
 
+    if (data.apiKey !== apiKey) {
+      toast({
+        title: "Error",
+        description: "Invalid API key. Please use the provided API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const response = await sendMessage(apiKey, data.phoneNumber, data.message);
+      const response = await sendMessage(data.apiKey, data.phoneNumber, data.message);
       
       if (response.success) {
         toast({
           title: "Success",
           description: "Message sent successfully!",
         });
-        form.reset();
+        form.reset({
+          phoneNumber: '',
+          message: '',
+          apiKey: apiKey || ''
+        });
       } else {
         toast({
           title: "Error",
@@ -78,10 +105,10 @@ export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady })
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 shadow-xl">
       <CardHeader>
-        <CardTitle>Send WhatsApp Message</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-xl font-semibold text-white">Message Composer</CardTitle>
+        <CardDescription className="text-gray-300">
           Send a message to any WhatsApp number
         </CardDescription>
       </CardHeader>
@@ -93,18 +120,19 @@ export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady })
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel className="text-gray-300">Recipient Number</FormLabel>
                   <FormControl>
                     <Input 
                       placeholder="e.g. 923001234567" 
                       {...field} 
                       disabled={isSubmitting || !clientReady}
+                      className="bg-gray-800 text-white border-gray-700 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-gray-400">
                     Enter the full phone number with country code, without spaces or special characters.
                   </FormDescription>
-                  <FormMessage />
+                  <FormMessage className="text-red-400" />
                 </FormItem>
               )}
             />
@@ -114,23 +142,41 @@ export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady })
               name="message"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Message</FormLabel>
+                  <FormLabel className="text-gray-300">Message Content</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="Type your message here..." 
-                      className="min-h-[120px]" 
+                      className="min-h-[120px] bg-gray-800 text-white border-gray-700 focus-visible:ring-indigo-500 focus-visible:border-indigo-500" 
                       {...field} 
                       disabled={isSubmitting || !clientReady}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-400" />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="apiKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-300">API Key</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      disabled={isSubmitting || !clientReady}
+                      className="bg-gray-800 text-white border-gray-700 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-red-400" />
                 </FormItem>
               )}
             />
             
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white" 
               disabled={isSubmitting || !clientReady}
             >
               {isSubmitting ? (
@@ -148,7 +194,7 @@ export const MessageForm: React.FC<MessageFormProps> = ({ apiKey, clientReady })
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex justify-between text-xs text-muted-foreground">
+      <CardFooter className="flex justify-between text-xs text-gray-400">
         <p>Powered by WhatsApp Web.js</p>
       </CardFooter>
     </Card>

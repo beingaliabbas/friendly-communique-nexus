@@ -43,17 +43,28 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ isConnected,
   }
 
   return (
-    <Alert variant={variant === "destructive" ? "destructive" : "default"} className="mb-6">
-      {icon}
-      <AlertTitle className="flex items-center gap-2">
+    <Alert 
+      variant={variant === "destructive" ? "destructive" : "default"} 
+      className="mb-6 border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 text-white"
+    >
+      <div className="flex items-center">
+        <div className={`w-3 h-3 rounded-full mr-2 ${clientReady ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+        {icon}
+      </div>
+      <AlertTitle className="flex items-center gap-2 text-white">
         {title}
         {clientReady && (
-          <Button variant="outline" size="sm" onClick={handleLogout} className="ml-auto">
-            Logout
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout} 
+            className="ml-auto bg-transparent hover:bg-red-900/30 border-red-700 text-red-400 hover:text-red-300"
+          >
+            Disconnect
           </Button>
         )}
       </AlertTitle>
-      <AlertDescription>
+      <AlertDescription className="text-gray-300">
         {description}
       </AlertDescription>
     </Alert>
